@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package com.lagrange.telemetry;
+option java_package = "com.lagrange.telemetry.grpc";
+option java_multiple_files = true;
+
+message AgentMessage {
+  string agent_id = 1;         // The UUID of the server being monitored
+  string api_key = 2;          // The security token to prevent rogue data injection
+  int64 timestamp_ms = 3;      // Unix Epoch timestamp in milliseconds
+
+  oneof payload {
+    SystemMetrics system_metrics = 4;
+    NetworkStats network_stats = 5;
+    SecurityEvent security_event = 6;
+  }
+}
+
+message SystemMetrics {
+  double cpu_usage_percent = 1;
+  double ram_total_mb = 2;
+  double ram_used_mb = 3;
+  double disk_read_kbps = 4;
+  double disk_write_kbps = 5;
+  int32 active_processes = 6;
+  int32 zombie_processes = 7;
+  optional double cpu_temperature_celsius = 8;
+  optional double gpu_temperature_celsius = 9;
+}
+
+message NetworkStats {
+  int32 active_tcp_connections = 1;
+  int32 active_udp_connections = 2;
+  double network_tx_kbps = 3;  // Transmitted bandwidth
+  double network_rx_kbps = 4;  // Received bandwidth
+}
+
+message SecurityEvent {
+  enum EventType {
+    UNKNOWN = 0;
+    FILE_MODIFIED = 1;
+    FILE_DELETED = 2;
+    UNAUTHORIZED_LOGIN = 3;
+    PORT_SCAN_DETECTED = 4;
+  }
+  
+  EventType event_type = 1;
+  string severity = 2;         // "INFO", "WARNING", "CRITICAL"
+  string description = 3;      // e.g., "Tampering detected in /etc/passwd"
+  string file_path = 4;        // Optional: only if FIM triggered it
+  string process_name = 5;     // Optional: if a rogue process was detected
+}
