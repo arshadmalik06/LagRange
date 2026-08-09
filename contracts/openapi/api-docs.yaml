@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: LagRange Management API
+  description: REST API for the LagRange React Dashboard and Agent Management.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Provide the JWT token received from /auth/login
+      
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT Access Token
+        role:
+          type: string
+          example: "ROLE_ADMIN"
+
+    AgentInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hostname:
+          type: string
+        os_type:
+          type: string
+          example: "LINUX"
+        status:
+          type: string
+          example: "ONLINE"
+        last_seen:
+          type: string
+          format: date-time
+
+    MetricResponse:
+      type: object
+      properties:
+        timestamp_ms:
+          type: integer
+          format: int64
+        cpu_usage_percent:
+          type: number
+          format: float
+        ram_used_mb:
+          type: number
+          format: float
+        cpu_temperature_celsius:
+          type: number
+          format: float
+          nullable: true
+
+#API routes (Endpoints)
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate a dashboard user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /agents:
+    get:
+      summary: List all registered LagRange agents
+      tags: [Agent Management]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: A list of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentInfo'
+
+  /agents/register:
+    post:
+      summary: Register a new server for monitoring
+      tags: [Agent Management]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hostname:
+                  type: string
+                os_type:
+                  type: string
+      responses:
+        '201':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  api_key:
+                    type: string
+                    description: The key to inject into the C++ agent config
+
+  /metrics/{agentId}:
+    get:
+      summary: Get historical metrics for a specific agent
+      tags: [Telemetry Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: minutes
+          description: How many minutes of history to retrieve
+          schema:
+            type: integer
+            default: 60
+      responses:
+        '200':
+          description: A time-series array of metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MetricResponse'
