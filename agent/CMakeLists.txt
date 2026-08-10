@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(LagRangeAgent VERSION 1.0.0 LANGUAGES CXX)
 
-# Enforce C++17 standard (Required for Protobuf 'optional' fields)
+# Enforce C++17 standard 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -18,33 +18,29 @@ file(MAKE_DIRECTORY ${PROTO_BUILD_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/../contracts/protobuf/telemetry.proto
 )
-
 # Include directories so our code can find the headers
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src   # CRITICAL FIX: Tells compiler to look inside src/
     ${PROTO_BUILD_DIR}
     ${Protobuf_INCLUDE_DIRS}
 )
-
-# Group our source files
-set(CORE_SRCS
-    src/main.cpp
-)
-
 # OS-Specific Configuration for underlying system calls
 if(WIN32)
     message(STATUS "Configuring LagRange Agent for Windows...")
-    # These libraries are required for reading hardware/network on Windows
-    set(OS_LIBS pdh Iphlpapi ws2_32)
+    # CRITICAL FIX: Added 'psapi' so EnumProcesses works on MinGW
+    set(OS_LIBS pdh iphlpapi ws2_32 psapi)
 elseif(UNIX AND NOT APPLE)
     message(STATUS "Configuring LagRange Agent for Linux...")
-    # Linux reads directly from /proc and /sys, so no extra Win32 libs are needed
     set(OS_LIBS) 
 endif()
-
+# CRITICAL FIX: Explicitly add the Collector C++ files to the build
+set(CORE_SRCS
+    src/main.cpp
+    src/collectors/WindowsCollector.cpp
+    src/collectors/LinuxCollector.cpp
+)
 # Create the final executable
 add_executable(lagrange-agent ${CORE_SRCS} ${PROTO_SRCS} ${PROTO_HDRS})
-
 # Link libraries to the executable
 target_link_libraries(lagrange-agent
     PRIVATE
