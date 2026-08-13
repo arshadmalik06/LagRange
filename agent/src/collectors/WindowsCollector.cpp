@@ -25,11 +25,14 @@ private:
 
 public:
     WindowsCollector() {
-        PdhOpenQuery(NULL, NULL, &pdhQuery);
+        // We added 'A' to the end of the function names to strictly force standard ANSI strings
+        // We also use 0 instead of NULL for the DWORD_PTR argument to satisfy the compiler
+        PdhOpenQueryA(NULL, 0, &pdhQuery);
+        
         // Map to your CPU and Disk metrics
-        PdhAddEnglishCounter(pdhQuery, "\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
-        PdhAddEnglishCounter(pdhQuery, "\\PhysicalDisk(_Total)\\Disk Read Bytes/sec", NULL, &diskRead);
-        PdhAddEnglishCounter(pdhQuery, "\\PhysicalDisk(_Total)\\Disk Write Bytes/sec", NULL, &diskWrite);
+        PdhAddEnglishCounterA(pdhQuery, "\\Processor(_Total)\\% Processor Time", 0, &cpuTotal);
+        PdhAddEnglishCounterA(pdhQuery, "\\PhysicalDisk(_Total)\\Disk Read Bytes/sec", 0, &diskRead);
+        PdhAddEnglishCounterA(pdhQuery, "\\PhysicalDisk(_Total)\\Disk Write Bytes/sec", 0, &diskWrite);
         
         PdhCollectQueryData(pdhQuery);
         lastTimeMs = GetTickCount64();
