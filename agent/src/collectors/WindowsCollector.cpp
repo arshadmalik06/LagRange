@@ -73,6 +73,8 @@ public:
             metrics->set_active_processes(cbNeeded / sizeof(DWORD));
         }
         metrics->set_zombie_processes(0); // Windows does not have Linux-style zombies
+        metrics->set_cpu_temperature_celsius(0.0);
+        metrics->set_gpu_temperature_celsius(0.0);
     }
 
     void collectNetworkStats(com::lagrange::telemetry::NetworkStats* stats) override {
