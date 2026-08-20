@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Find necessary system packages
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED) # Still needed for code generation
+find_package(Boost REQUIRED)    # <-- ADDED: Boost for Networking
 
 # === THE PKG-CONFIG FIX ===
 # This forces CMake to find every single hidden Abseil library for us
@@ -26,25 +27,32 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
 
 # Include directories so our code can find the headers
 include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include   # <-- ADDED: Our new architecture headers
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Protobuf_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}                 # <-- ADDED: Boost headers
 )
 
 # OS-Specific Configuration for underlying system calls
 if(WIN32)
     message(STATUS "Configuring LagRange Agent for Windows...")
-    set(OS_LIBS pdh iphlpapi ws2_32 psapi)
+    # ADDED mswsock (Microsoft Sockets) which Boost needs for Windows TCP connections
+    set(OS_LIBS pdh iphlpapi ws2_32 mswsock psapi)
+    set(OS_COLLECTOR src/collectors/WindowsCollector.cpp)
 elseif(UNIX AND NOT APPLE)
     message(STATUS "Configuring LagRange Agent for Linux...")
     set(OS_LIBS) 
+    set(OS_COLLECTOR src/collectors/LinuxCollector.cpp)
 endif()
 
-# Explicitly add the Collector C++ files to the build
+# Explicitly add all C++ files to the build
 set(CORE_SRCS
     src/main.cpp
-    src/collectors/WindowsCollector.cpp
-    src/collectors/LinuxCollector.cpp
+    src/core/Config.cpp                   # <-- ADDED: New Core files
+    src/core/NetworkClient.cpp
+    src/core/Agent.cpp
+    ${OS_COLLECTOR}
 )
 
 # Create the final executable
@@ -54,6 +62,6 @@ add_executable(lagrange-agent ${CORE_SRCS} ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(lagrange-agent
     PRIVATE
     Threads::Threads
-    PkgConfig::PROTOBUF_PKG   # <-- The magic glue that links everything safely
+    PkgConfig::PROTOBUF_PKG   # <-- Your magic glue is safe!
     ${OS_LIBS}
 )
